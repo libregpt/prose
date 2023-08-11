@@ -55,16 +55,12 @@ fn translate_list_elements(lines: Vec<MarkdownText>) -> Html {
 }
 
 fn translate_heading(size: NonZeroUsize, text: MarkdownText) -> Html {
-  let text = translate_text(text);
+  let mut heading = String::with_capacity(2);
+  heading.push('h');
+  heading.push_str(itoa::Buffer::new().format(size.get()));
 
-  match size.get() {
-    1 => html! { <h1>{text}</h1> },
-    2 => html! { <h2>{text}</h2> },
-    3 => html! { <h3>{text}</h3> },
-    4 => html! { <h4>{text}</h4> },
-    5 => html! { <h5>{text}</h5> },
-    6 => html! { <h6>{text}</h6> },
-    _ => unreachable!(),
+  html! {
+    <@{heading}>{translate_text(text)}</@>
   }
 }
 
@@ -99,10 +95,8 @@ fn translate_codeblock(lang: String, code: String) -> Html {
 }
 
 fn translate_line(text: MarkdownText) -> Html {
-  if text.is_empty() {
-    html! {}
-  } else {
-    html! {
+  html! {
+    if !text.is_empty() {
       <p>{translate_text(text)}</p>
     }
   }
