@@ -1,11 +1,15 @@
 pub mod parser;
 pub mod translator;
 
+use std::num::NonZeroUsize;
+
+use yew::{html, Html};
+
 pub type MarkdownText = Vec<MarkdownInline>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Markdown {
-  Heading(usize, MarkdownText),
+  Heading(NonZeroUsize, MarkdownText),
   OrderedList(Vec<MarkdownText>),
   UnorderedList(Vec<MarkdownText>),
   Line(MarkdownText),
@@ -22,9 +26,9 @@ pub enum MarkdownInline {
   Plaintext(String),
 }
 
-pub fn markdown(md: &str) -> String {
-  match parser::parse_markdown(md) {
-    Ok((_, m)) => translator::translate(m),
-    Err(_) => String::from("Sorry, this did not seem to work! Maybe your markdown was not well formed, have you hit [Enter] after your last line?"),
+pub fn process(md: &str) -> Html {
+  match parser::parse(md) {
+    Ok((_, md)) => translator::translate(md),
+    Err(_) => html! { {"Failed to parse markdown, make sure it ends with '\\n'."} },
   }
 }

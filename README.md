@@ -23,7 +23,7 @@ Easy! You will need a few things.
 
 #### Support
 ###### Prose supports the following markdown structures:
-- Headers 1-6
+- Headings 1-6
 - Ordered Lists
 - Unordered Lists
 - Codeblocks (no specified language support)

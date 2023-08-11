@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use nom::{
   branch::alt,
   bytes::complete::{is_not, tag, take, take_while1},
@@ -10,16 +12,16 @@ use nom::{
 
 use crate::{Markdown, MarkdownInline, MarkdownText};
 
-pub fn parse_markdown(i: &str) -> IResult<&str, Vec<Markdown>> {
+pub fn parse(md: &str) -> IResult<&str, Vec<Markdown>> {
   many1(alt((
-    map(parse_header, |e| Markdown::Heading(e.0, e.1)),
+    map(parse_heading, |e| Markdown::Heading(e.0, e.1)),
     map(parse_unordered_list, |e| Markdown::UnorderedList(e)),
     map(parse_ordered_list, |e| Markdown::OrderedList(e)),
     map(parse_code_block, |e| {
       Markdown::Codeblock(e.0.to_string(), e.1.to_string())
     }),
     map(parse_markdown_text, |e| Markdown::Line(e)),
-  )))(i)
+  )))(md)
 }
 
 fn parse_boldtext(i: &str) -> IResult<&str, &str> {
@@ -89,16 +91,16 @@ fn parse_markdown_text(i: &str) -> IResult<&str, MarkdownText> {
 }
 
 // this guy matches the literal character #
-fn parse_header_tag(i: &str) -> IResult<&str, usize> {
+fn parse_heading_tag(i: &str) -> IResult<&str, NonZeroUsize> {
   map(
     terminated(take_while1(|c| c == '#'), tag(" ")),
-    |s: &str| s.len(),
+    |s: &str| NonZeroUsize::new(s.len()).unwrap(),
   )(i)
 }
 
-// this combines a tuple of the header tag and the rest of the line
-fn parse_header(i: &str) -> IResult<&str, (usize, MarkdownText)> {
-  tuple((parse_header_tag, parse_markdown_text))(i)
+// this combines a tuple of the heading tag and the rest of the line
+fn parse_heading(i: &str) -> IResult<&str, (NonZeroUsize, MarkdownText)> {
+  tuple((parse_heading_tag, parse_markdown_text))(i)
 }
 
 fn parse_unordered_list_tag(i: &str) -> IResult<&str, &str> {
@@ -572,20 +574,20 @@ mod tests {
   }
 
   #[test]
-  fn test_parse_header_tag() {
-    assert_eq!(parse_header_tag("# "), Ok(("", 1)));
-    assert_eq!(parse_header_tag("### "), Ok(("", 3)));
-    assert_eq!(parse_header_tag("# h1"), Ok(("h1", 1)));
-    assert_eq!(parse_header_tag("# h1"), Ok(("h1", 1)));
+  fn test_parse_heading_tag() {
+    assert_eq!(parse_heading_tag("# "), Ok(("", 1)));
+    assert_eq!(parse_heading_tag("### "), Ok(("", 3)));
+    assert_eq!(parse_heading_tag("# h1"), Ok(("h1", 1)));
+    assert_eq!(parse_heading_tag("# h1"), Ok(("h1", 1)));
     assert_eq!(
-      parse_header_tag(" "),
+      parse_heading_tag(" "),
       Err(NomErr::Error(Error {
         input: " ",
         code: ErrorKind::TakeWhile1
       }))
     );
     assert_eq!(
-      parse_header_tag("#"),
+      parse_heading_tag("#"),
       Err(NomErr::Error(Error {
         input: "",
         code: ErrorKind::Tag
@@ -594,53 +596,53 @@ mod tests {
   }
 
   #[test]
-  fn test_parse_header() {
+  fn test_parse_heading() {
     assert_eq!(
-      parse_header("# h1\n"),
+      parse_heading("# h1\n"),
       Ok(("", (1, vec![MarkdownInline::Plaintext(String::from("h1"))])))
     );
     assert_eq!(
-      parse_header("## h2\n"),
+      parse_heading("## h2\n"),
       Ok(("", (2, vec![MarkdownInline::Plaintext(String::from("h2"))])))
     );
     assert_eq!(
-      parse_header("###  h3\n"),
+      parse_heading("###  h3\n"),
       Ok((
         "",
         (3, vec![MarkdownInline::Plaintext(String::from(" h3"))])
       ))
     );
     assert_eq!(
-      parse_header("###h3"),
+      parse_heading("###h3"),
       Err(NomErr::Error(Error {
         input: "h3",
         code: ErrorKind::Tag
       }))
     );
     assert_eq!(
-      parse_header("###"),
+      parse_heading("###"),
       Err(NomErr::Error(Error {
         input: "",
         code: ErrorKind::Tag
       }))
     );
     assert_eq!(
-      parse_header(""),
+      parse_heading(""),
       Err(NomErr::Error(Error {
         input: "",
         code: ErrorKind::TakeWhile1
       }))
     );
     assert_eq!(
-      parse_header("#"),
+      parse_heading("#"),
       Err(NomErr::Error(Error {
         input: "",
         code: ErrorKind::Tag
       }))
     );
-    assert_eq!(parse_header("# \n"), Ok(("", (1, vec![]))));
+    assert_eq!(parse_heading("# \n"), Ok(("", (1, vec![]))));
     assert_eq!(
-      parse_header("# test"),
+      parse_heading("# test"),
       Err(NomErr::Error(Error {
         input: "",
         code: ErrorKind::Tag
